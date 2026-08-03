@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.envFile": "${workspaceFolder}/.env",
+    "code-runner.executorMap": {
+        "python": "$workspaceRoot/.venv/bin/python -u $fullFileName"
+    },
+    "code-runner.runInTerminal": false,
+    "code-runner.fileDirectoryAsCwd": true
+}
