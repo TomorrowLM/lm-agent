@@ -1,3 +1,3 @@
-from services.agent import agent_service, AgentService
+from .routes import router
 
-__all__ = ["agent_service", "AgentService"]
+__all__ = ["router"]

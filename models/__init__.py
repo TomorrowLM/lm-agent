@@ -1,3 +1,3 @@
-from core.config import settings
+from .schemas import ChatRequest, ChatResponse, ErrorResponse
 
-__all__ = ["settings"]
+__all__ = ["ChatRequest", "ChatResponse", "ErrorResponse"]
