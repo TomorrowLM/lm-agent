@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # LLM
+    ai_base_url: str = "https://api.openai.com/v1"
     openai_base_url: str = "https://api.openai.com/v1"
     openai_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com/v1"

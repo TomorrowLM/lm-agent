@@ -33,6 +33,7 @@ class AgentService:
         )
         async for chunk in stream:
             delta = chunk.choices[0].delta
+            print(delta.content)
             if delta.content:
                 yield delta.content
 

@@ -5,9 +5,9 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class ChatRequest(BaseModel):
-    message: str = Field(..., description="用户消息")
-    model: str = Field(default="deepseek-chat", description="模型名称")
+class ChatRequest(BaseModel): 
+    message: str = Field(..., description="用户消息") # ... → 必填
+    model: str = Field(default="deepseek-chat", description="模型名称")# 有 default → 可选
     stream: bool = Field(default=False, description="是否流式返回")
 
 
