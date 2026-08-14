@@ -48,10 +48,12 @@ graph LR
 
 ```bash
 uv sync
-uv run uvicorn main:app --reload
+uv run python main.py
 ```
 
-访问 `http://127.0.0.1:8000/docs` 查看 Swagger 自动文档。
+访问 `http://127.0.0.1:3000/docs` 查看 Swagger 自动文档。
+
+服务监听地址与端口由 `.env` 中的 `HOST` / `PORT` 控制，默认 `127.0.0.1:3000`。
 
 ## 目录
 
@@ -79,6 +81,7 @@ uv run uvicorn main:app --reload
 
 在 `.env` 中设置：
 
+- `HOST` / `PORT` — 服务监听地址与端口（默认 `127.0.0.1:3000`）
 - `OPENAI_BASE_URL` / `OPENAI_API_KEY` — OpenAI 兼容接口
 - `DEEPSEEK_BASE_URL` / `DEEPSEEK_API_KEY` — DeepSeek 接口
 

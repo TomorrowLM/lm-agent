@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
+    # 服务
+    host: str = "127.0.0.1"
+    port: int = 3000
+
     # LLM
     ai_base_url: str = "https://api.openai.com/v1"
     openai_base_url: str = "https://api.openai.com/v1"
