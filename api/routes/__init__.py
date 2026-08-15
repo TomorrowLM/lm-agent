@@ -1,4 +1,4 @@
-"""路由注册"""
+"""API 路由聚合层，统一注册聊天与健康检查路由。"""
 
 from fastapi import APIRouter
 
