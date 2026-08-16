@@ -1,0 +1,18 @@
+"""SSE 事件类型与错误码常量定义"""
+
+
+class EventType:
+    """聊天流式协议事件类型"""
+
+    STREAM_CREATED = "STREAM_CREATED"
+    MESSAGE_STARTED = "MESSAGE_STARTED"
+    ANSWER_DELTA = "ANSWER_DELTA"
+    MESSAGE_COMPLETE = "MESSAGE_COMPLETE"
+    STREAM_COMPLETED = "STREAM_COMPLETED"
+    STREAM_FAILED = "STREAM_FAILED"
+
+
+class ErrorCode:
+    """稳定错误码，前端按错误码映射友好文案"""
+
+    CHAT_STREAM_FAILED = "CHAT_STREAM_FAILED"
