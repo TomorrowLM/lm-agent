@@ -1,13 +1,11 @@
 """对话接口"""
 
-import json
-import uuid
-
 from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
 
 from models.schemas import ChatRequest, ChatResponse
 from services.agent import agent_service
+from services.chat_stream import stream_chat_events
 
 router = APIRouter()
 
@@ -17,41 +15,37 @@ async def chat(req: ChatRequest) -> ChatResponse:
     reply = await agent_service.chat(req.message, req.model)
     return ChatResponse(reply=reply, model=req.model)
 
-@router.post("/stream")
-async def chat_stream(req: ChatRequest):
-    async def event_generator():
-        message_id = f"msg_{uuid.uuid4().hex[:12]}"
-        block_id = f"answer_{uuid.uuid4().hex[:12]}"
 
-        yield {
-            "event": "MESSAGE_STARTED",
-            "data": json.dumps({
-                "eventType": "MESSAGE_STARTED",
-                "messageId": message_id,
-            }, ensure_ascii=False),
+@router.post(
+    "/stream",
+    response_class=EventSourceResponse,
+    responses={
+        200: {
+            "description": "SSE 聊天事件流",
+            "content": {
+                "text/event-stream": {
+                    "schema": {"type": "string"},
+                    "example": (
+                        "event: STREAM_CREATED\n"
+                        'data: {"eventType":"STREAM_CREATED","seq":1}\n\n'
+                        "event: MESSAGE_STARTED\n"
+                        'data: {"eventType":"MESSAGE_STARTED","seq":2}\n\n'
+                    ),
+                }
+            },
         }
-
-        async for chunk in agent_service.chat_stream(req.message, req.model):
-            yield {
-                "event": "ANSWER_DELTA",
-                "data": json.dumps({
-                    "eventType": "ANSWER_DELTA",
-                    "messageId": message_id,
-                    "payload": {
-                        "blockId": block_id,
-                        "type": "answer",
-                        "content": chunk, 
-                        "status": "streaming",
-                    },
-                }, ensure_ascii=False),
-            }
-
-        yield {
-            "event": "STREAM_COMPLETED",
-            "data": json.dumps({
-                "eventType": "STREAM_COMPLETED",
-                "messageId": message_id,
-            }, ensure_ascii=False),
-        }
-
-    return EventSourceResponse(event_generator())
+    },
+)
+async def chat_stream(req: ChatRequest) -> EventSourceResponse:
+    # 使用 LF 换行，与前端/测试解析器的 "\n\n" 事件分隔约定保持一致
+    # EventSourceResponse 是 sse-starlette 提供的 SSE（Server-Sent Events）流式响应类。
+    # 它会持续读取迭代器产生的数据，并通过 HTTP text/event-stream 响应逐条发送给客户端。
+    return EventSourceResponse(
+        stream_chat_events(
+            message=req.message,
+            model=req.model,
+            conversation_id=req.conversation_id,
+            client_request_id=req.client_request_id,
+        ),
+        sep="\n",
+    )

@@ -16,7 +16,7 @@
 
 - 普通对话。
 - 流式回答。
-- 推理过程展示。
+- 可验证的执行进度展示。
 - 工具调用展示。
 - RAG 引用来源。
 - 多轮上下文。
@@ -28,9 +28,9 @@
 
 | 来源 | 借鉴内容 | 在本项目中的落点 |
 |---|---|---|
-| DeepSeek | 简洁聊天体验、居中空态、底部输入、思考过程低干扰展示 | 页面设计与交互设计 |
+| DeepSeek | 简洁聊天体验、居中空态、底部输入、执行状态低干扰展示 | 页面设计与交互设计 |
 | `yqa-g-h5-agent` | 统一消息流、SSE 状态流、停止 / 重试 / Markdown / 自动滚动方案 | SSE 状态设计、错误处理、自动滚动、流式更新 |
-| `igor-llm` | `think` / `plan` / `phase` / `answer` / `quote` 等 Agent 内容块展示方案 | 内容块模型、复杂消息渲染、Markdown 组件替换 |
+| `igor-llm` | `think` / `plan` / `phase` / `answer` / `quote` 等内容块参考 | 在本项目中映射为可验证的 `progress / plan / phase / answer / quote` 模型 |
 
 本项目不是直接复制某个已有项目，而是组合它们的优点：
 
@@ -59,7 +59,7 @@ UnifiedChatMessageList
 	↓
 User / Assistant / System 渲染器
 	↓
-Text / Think / Plan / Phase / Tool / Markdown / Quote 等内容块
+Text / Progress / Plan / Phase / Tool / Markdown / Quote 等内容块
 ```
 
 用户发送消息后的整体链路：
@@ -87,7 +87,7 @@ MessageRenderer
 核心设计原则：
 
 1. **UI 不直接绑定后端协议**：后端事件先经过 adapter，再转成统一消息模型。
-2. **消息由多个内容块组成**：一条 assistant 消息可以包含 `think`、`plan`、`tool`、`answer`、`quote` 等块。
+2. **消息由多个内容块组成**：一条 assistant 消息可以包含 `progress`、`plan`、`tool`、`answer`、`quote` 等块。
 3. **Markdown 只是回答块的一部分**：复杂 Agent 展示不能只依赖 Markdown 组件完成。
 4. **先实现最小聊天，再逐步扩展**：先 Mock 流式输出，再接简单 SSE，再扩展 Agent 内容块。
 
@@ -145,7 +145,7 @@ MessageRenderer
 本项目目标是 DeepSeek-like Agent 聊天窗，后续会展示：
 
 ```text
-think / plan / phase / tool / answer / quote
+progress / plan / phase / tool / answer / quote
 RAG 引用来源
 工具调用卡片
 复杂代码块
@@ -172,7 +172,7 @@ Agent / RAG / DeepSeek-like 复杂展示：markdown-it + html-react-parser 更�
 - 空态下输入框居中，突出“开始提问”。
 - 对话后输入框固定在底部。
 - 模式按钮显性展示，例如 `DeepThink`、`Search`、`Tools`。
-- 思考、计划、工具调用和引用信息使用低干扰的折叠或卡片展示。
+- 进度、计划、工具调用和引用信息使用低干扰的折叠或卡片展示。
 
 ### 5.2 空态
 
@@ -201,8 +201,8 @@ User:
 Assistant:
 	正在理解你的问题...
 
-	Thinking
-	我需要先区分普通 API 调用和 Function Calling...
+	Progress
+	正在校验工具参数并准备执行...
 
 	Answer
 	Function Calling 是让模型输出结构化函数调用请求...
@@ -324,7 +324,7 @@ src/
 		ChatBlocks/
 			TextBlock.tsx
 			MarkdownBlock.tsx
-			ThinkBlock.tsx
+			ProgressBlock.tsx
 			PlanBlock.tsx
 			PhaseBlock.tsx
 			ToolBlock.tsx
@@ -375,7 +375,7 @@ type UnifiedMessageRole = 'user' | 'assistant' | 'system';
 type UnifiedContentType =
 	| 'text'
 	| 'markdown'
-	| 'think'
+	| 'progress'
 	| 'plan'
 	| 'phase'
 	| 'answer'
@@ -404,7 +404,7 @@ interface UnifiedContentBlock {
 设计含义：
 
 - `user` 消息通常只有一个 `text` 块。
-- `assistant` 消息可以包含多个块，如 `think`、`plan`、`phase`、`answer`、`quote`。
+- `assistant` 消息可以包含多个块，如 `progress`、`plan`、`phase`、`answer`、`quote`。
 - `system` 消息用于展示停止、错误、登录失效等提示。
 - UI 只消费统一模型，不直接绑定后端原始事件。
 
@@ -418,9 +418,9 @@ interface ChatContentBlockPayload {
 	blockId: string;
 	/** 内容块类型，决定前端用哪个 Block 组件渲染 */
 	type: ChatContentBlockType;
-	/** 内容块标题，例如“思考过程”“回答计划”“参考来源” */
+	/** 内容块标题，例如“执行进度”“回答计划”“参考来源” */
 	title?: string;
-	/** 文本内容，适用于 think / phase / answer 等文本块 */
+	/** 文本内容，适用于 progress / phase / answer 等文本块 */
 	content?: string;
 	/** 内容块状态，用于展示 loading、成功、失败 */
 	status?: ChatBlockStatus;
@@ -430,7 +430,7 @@ interface ChatContentBlockPayload {
 
 type ChatContentBlockType =
 	| 'phase'
-	| 'think'
+	| 'progress'
 	| 'plan'
 	| 'tool'
 	| 'answer'
@@ -445,9 +445,9 @@ type ChatBlockStatus = 'pending' | 'running' | 'streaming' | 'success' | 'error'
 | 字段 | 类型 | 是否必填 | 说明 |
 |---|---|---:|---|
 | `blockId` | `string` | 是 | 内容块唯一 ID；流式追加时，同一块保持同一个 `blockId`。 |
-| `type` | `ChatContentBlockType` | 是 | 渲染类型，例如 `think` 用思考块，`answer` 用 Markdown 回答块。 |
-| `title` | `string` | 可选 | 展示标题，例如“思考过程”“调用工具：搜索”。 |
-| `content` | `string` | 文本块必填 | 文本内容；`ANSWER_DELTA` / `THINK_DELTA` 中是增量文本。 |
+| `type` | `ChatContentBlockType` | 是 | 渲染类型，例如 `progress` 用进度块，`answer` 用 Markdown 回答块。 |
+| `title` | `string` | 可选 | 展示标题，例如“执行进度”“调用工具：搜索”。 |
+| `content` | `string` | 文本块必填 | 文本内容；`ANSWER_DELTA` / `PROGRESS` 中可以是增量或状态文本。 |
 | `status` | `ChatBlockStatus` | 建议必填 | 块状态，用于展示执行中、流式中、成功、失败。 |
 | `data` | `unknown` | 结构化块必填 | 计划步骤、工具参数、引用来源等结构化数据。 |
 
@@ -597,7 +597,7 @@ type ChatEventType =
 	| 'STREAM_CREATED'
 	| 'MESSAGE_STARTED'
 	| 'PHASE'
-	| 'THINK_DELTA'
+	| 'PROGRESS'
 	| 'PLAN'
 	| 'TOOL_STARTED'
 	| 'TOOL_COMPLETED'
@@ -639,7 +639,7 @@ conversationId
 | `clientRequestId` | 前端本次点击发送的请求 ID | 防重复、幂等、前后端日志关联。 |
 | `runId` | 后端本次 Agent 执行 ID | 停止生成、执行状态查询、排障。 |
 | `messageId` | 一条 assistant 消息 ID | 将多个内容块归属于同一条 AI 回复。 |
-| `blockId` | assistant 消息里的内容块 ID | 流式追加、更新指定块，如 answer / think / tool。 |
+| `blockId` | assistant 消息里的内容块 ID | 流式追加、更新指定块，如 answer / progress / tool。 |
 | `seq` | SSE 事件顺序号 | 判断事件顺序、重复、丢失。 |
 
 `clientRequestId` 是前端为“本次发送请求”生成的唯一编号，不是会话 ID，也不是后端运行 ID。
@@ -690,7 +690,7 @@ seq = 5  STREAM_COMPLETED
 ```text
 runId = run_001
 	└── messageId = msg_ai_001
-				├── blockId = think_001
+				├── blockId = progress_001
 				├── blockId = plan_001
 				├── blockId = tool_001
 				├── blockId = answer_001
@@ -785,7 +785,7 @@ runId = run_001
 | `STREAM_CREATED` | - | `conversationId`、`runId` | 记录会话和运行 ID。 |
 | `MESSAGE_STARTED` | - | `messageId` | 创建 assistant 空消息。 |
 | `PHASE` | `phase` | `title`、`content`、`status` | 展示当前处理阶段。 |
-| `THINK_DELTA` | `think` | `blockId`、`content`、`status` | 追加思考过程内容。 |
+| `PROGRESS` | `progress` | `blockId`、`content`、`status` | 更新可验证的执行进度。 |
 | `PLAN` | `plan` | `data.steps` | 渲染计划步骤列表。 |
 | `TOOL_STARTED` | `tool` | `data.toolName`、`data.arguments` | 渲染工具执行中卡片。 |
 | `TOOL_COMPLETED` | `tool` | `data.toolName`、`data.result` | 更新工具卡片为完成状态。 |
@@ -814,7 +814,7 @@ runId = run_001
 	↓
 记录 conversationId / runId / messageId
 	↓
-收到 PHASE / THINK_DELTA / PLAN / TOOL / ANSWER_DELTA / QUOTE
+收到 PHASE / PROGRESS / PLAN / TOOL / ANSWER_DELTA / QUOTE
 	↓
 按 messageId + blockId 合并内容块
 	↓
@@ -847,7 +847,7 @@ STREAM_FAILED     -> system error
 #### 9.2.3 `igor-llm` 风格适配
 
 ```text
-think  -> think block
+think  -> progress block
 plan   -> plan block
 phase  -> phase block
 answer -> answer block
@@ -872,10 +872,10 @@ quote  -> quote block
 			"status": "success"
 		},
 		{
-			"id": "think_001",
-			"type": "think",
-			"title": "思考过程",
-			"content": "我需要先解释 Function Calling 和普通 API 调用的区别。然后给出 JSON 参数和工具执行流程。",
+			"id": "progress_001",
+			"type": "progress",
+			"title": "执行进度",
+			"content": "工具参数校验完成，正在生成最终回答。",
 			"status": "success"
 		},
 		{
@@ -934,7 +934,7 @@ quote  -> quote block
 |---|---|---|
 | `text` | `TextBlock` | 普通文本 |
 | `markdown` / `answer` | `MarkdownBlock` | Markdown 回复 |
-| `think` | `ThinkBlock` | 可折叠思考过程 |
+| `progress` | `ProgressBlock` | 可折叠执行进度 |
 | `plan` | `PlanBlock` | 执行计划列表 |
 | `phase` | `PhaseBlock` | 当前阶段状态 |
 | `tool` | `ToolBlock` | 工具调用卡片 |
@@ -947,7 +947,7 @@ quote  -> quote block
 MessageRenderer
 	├── UserMessage
 	├── AssistantMessage
-	│     ├── ThinkBlock
+	│     ├── ProgressBlock
 	│     ├── PlanBlock
 	│     ├── PhaseBlock
 	│     ├── ToolBlock
@@ -964,8 +964,8 @@ function AssistantMessage({ message }) {
 		<div className="assistant-message">
 			{message.content.map((block) => {
 				switch (block.type) {
-					case 'think':
-						return <ThinkBlock key={block.id} block={block} />;
+					case 'progress':
+						return <ProgressBlock key={block.id} block={block} />;
 					case 'plan':
 						return <PlanBlock key={block.id} block={block} />;
 					case 'phase':
@@ -1134,39 +1134,39 @@ Assistant:
 	正在分析你的问题...
 ```
 
-### 11.4 思考过程
+### 11.4 执行进度
 
 ```text
-event: THINK_DELTA
+event: PROGRESS
 data: {
-	"eventType": "THINK_DELTA",
+	"eventType": "PROGRESS",
 	"conversationId": "conv_001",
 	"runId": "run_001",
 	"messageId": "msg_ai_001",
 	"payload": {
-		"blockId": "think_001",
-		"type": "think",
-		"title": "思考过程",
-		"content": "我需要先解释 Function Calling 和普通 API 调用的区别。",
-		"status": "streaming"
+		"blockId": "progress_001",
+		"type": "progress",
+		"title": "执行进度",
+		"content": "正在校验工具参数。",
+		"status": "running"
 	}
 }
 ```
 
-继续返回同一个 `blockId`：
+继续更新同一个 `blockId`：
 
 ```text
-event: THINK_DELTA
+event: PROGRESS
 data: {
-	"eventType": "THINK_DELTA",
+	"eventType": "PROGRESS",
 	"conversationId": "conv_001",
 	"runId": "run_001",
 	"messageId": "msg_ai_001",
 	"payload": {
-		"blockId": "think_001",
-		"type": "think",
-		"content": "然后给出 JSON 参数和工具执行流程。",
-		"status": "streaming"
+		"blockId": "progress_001",
+		"type": "progress",
+		"content": "工具执行完成，正在整理最终回答。",
+		"status": "success"
 	}
 }
 ```
@@ -1174,14 +1174,14 @@ data: {
 前端处理：
 
 ```text
-同一个 messageId + blockId 的内容追加到同一个 think block。
+同一个 messageId + blockId 更新同一个 progress block。
 ```
 
 前端渲染：
 
 ```text
-▾ 正在思考
-	我需要先解释 Function Calling 和普通 API 调用的区别。然后给出 JSON 参数和工具执行流程。
+▾ 执行进度
+	工具执行完成，正在整理最终回答。
 ```
 
 ### 11.5 计划步骤
@@ -1477,9 +1477,9 @@ loading
 后续再逐步增加：
 
 ```text
-THINK_DELTA
 PLAN
 PHASE
+PROGRESS
 TOOL_STARTED
 TOOL_COMPLETED
 QUOTE
@@ -1489,37 +1489,36 @@ STREAM_FAILED
 
 ## 13. 实施阶段
 
-### 第一阶段：统一聊天壳
+### 前端 F1：聊天窗 MVP
 
 - DeepSeek-like 页面布局。
 - 空态和聊天态。
 - 消息列表。
 - 输入框。
-- Mock 流式输出。
-
-### 第二阶段：接入简单 SSE
-
 - 接 `lm-agent` 的聊天流。
 - 支持 `answer` 流式输出。
 - 支持停止生成。
+- 支持错误提示和自动滚动。
+- 建立 `Event Adapter + UnifiedMessage`。
+- 接入 qiankun 子应用生命周期。
 
-### 第三阶段：Agent 内容块
+### 前端 F2：Agent 执行内容块
 
-- 支持 `think`。
-- 支持 `plan`。
-- 支持 `phase`。
-- 支持 `tool`。
-- 支持 `quote`。
+- 定义 `progress / plan / phase / tool / quote` 类型。
+- 支持 `plan / phase / progress / tool` 渲染。
+- 展示工具运行、成功和失败状态。
+- 支持内容块折叠和展开。
+- 未识别内容块统一降级展示。
 
-### 第四阶段：接入 qiankun
+### 前端 F3：RAG 引用展示
 
-- `ai` 作为 qiankun 子应用导出生命周期。
-- `base` 注册 `ai` 子应用。
-- 支持开发与生产入口。
+- 支持 `quote` 引用来源。
+- 展示引用编号、文档标题、路径和命中片段。
+- 支持点击定位和无引用降级。
 
-### 第五阶段：RAG / Tool / Memory 扩展
+### 前端 F4：会话与运行控制
 
-- 支持 RAG 引用来源。
-- 支持工具调用卡片。
-- 支持会话记忆。
-- 支持多智能体协作展示。
+- 支持历史会话列表和恢复。
+- 支持记忆查看与删除。
+- 支持运行状态、人工审批和中断恢复。
+- 多智能体协作展示作为可选扩展。

@@ -47,7 +47,6 @@ async def stream_chat_events(
             "messageId": message_id,
             "seq": seq,
         }
-    yield 1;
     yield sse_event(EventType.STREAM_CREATED, base_event(EventType.STREAM_CREATED))
     yield sse_event(EventType.MESSAGE_STARTED, base_event(EventType.MESSAGE_STARTED))
 
